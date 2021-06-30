@@ -1,0 +1,123 @@
+---
+title: "Main"
+author: "Pierre Barban"
+date: "30/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.align='center')
+```
+
+
+```{r}
+#Packages
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(zoo)
+library(ggplot2)
+library(lubridate)
+
+```
+
+
+```{r }
+
+Starting.date = Sys.Date() %m+% months(-1)
+Ending.date = Sys.Date()
+n = as.numeric(difftime(as.Date(Ending.date),as.Date(Starting.date), units = c("days")))
+
+seq = seq(as.Date(Starting.date), by = "day", length.out = n)
+seq = str_replace_all(seq, "-", "%2F")
+data_list <- list()
+  for (i in seq) {
+    res <- GET(paste0("https://opendata.paris.fr/api/records/1.0/search/?dataset=comptage-velo-donnees-compteurs&q=&rows=-1&facet=id_compteur&facet=nom_compteur&facet=id&facet=name&facet=date&facet=installation_date&refine.date=",i))
+    data_list[[length(data_list)+1]] = fromJSON(rawToChar(res$content))[["records"]][["fields"]]
+  }
+data = do.call(rbind, data_list)
+
+data = na.omit(data) 
+
+bike.data = data %>% mutate(datetime = as.POSIXct(date,format = "%Y-%m-%dT%H:%M:%S+00:00"),
+                            dateday =  as.Date(datetime, format = "%Y-%m-%d"),
+                            hour = as.numeric(format(datetime,"%H")))
+```
+
+```{r}
+temp <-  tempfile()
+
+dataURL <- paste0("https://opendata.paris.fr/api/datasets/1.0/comptage-velo-historique-donnees-compteurs/attachments/",2018,"_comptage_velo_donnees_compteurs_csv_zip")
+
+dataURL
+
+download.file(dataURL,"~/file.csv", mode="wb")
+unzip("~/file.csv", "~/file.csv")
+
+test = read.csv2(list.files(pattern="*.csv"),sep=";")
+
+unlink(temp)
+
+getwd()
+
+temp <-  tempfile()
+
+data_list <- list()
+
+for (i in 2018:2020){
+dataURL <- paste0("https://opendata.paris.fr/api/datasets/1.0/comptage-velo-historique-donnees-compteurs/attachments/",2018,"_comptage_velo_donnees_compteurs_csv_zip")
+
+download.file(dataURL,temp, mode="wb")
+unzip(temp, paste0("comptage",i,".csv"))
+data_list[[length(data_list)+1]] = read.csv2(list.files(pattern="*.csv"),sep=";")
+
+unlink(temp)
+}
+
+for (i in 2018:2020){
+  print(i)
+}
+
+```
+
+```{r setup, include=FALSE}
+setwd("/Volumes/Files/Paris_Paper/")
+velo.raw.data.2018 = read.csv("2018_comptage-velo-donnees-compteurs.csv", sep = ";")
+velo.raw.data.2019 = read.csv("2019_comptage-velo-donnees-compteurs-2.csv", sep = ";")
+velo.raw.data.2020 = read.csv("comptage-velo-donnees-compteurs.csv", sep = ";")
+
+velo.raw.data = rbind(velo.raw.data.2018, velo.raw.data.2019, velo.raw.data.2020)
+
+velo.raw.data$datetime = str_replace_all(velo.raw.data$Date.et.heure.de.comptage,"T", " ")
+velo.raw.data$datetime = substr(velo.raw.data$date,1,19)
+velo.raw.data$datetime = as.POSIXct(velo.raw.data$datetime, format = "%Y-%m-%d %H:%M:%S")
+velo.raw.data$date = as.Date(format(velo.raw.data$datetime, format = "%Y-%m-%d"))
+velo.raw.data$hour = as.numeric(format(velo.raw.data$datetime,"%H"))
+velo.raw.data$day = as.numeric(format(velo.raw.data$datetime,"%d"))
+velo.raw.data$month = as.numeric(format(velo.raw.data$datetime,"%m"))
+velo.raw.data$year = as.numeric(format(velo.raw.data$datetime,"%Y"))
+velo.raw.data$weekdays = as.numeric(as.POSIXlt(velo.raw.data$datetime)$wday )
+velo.raw.data$week = as.numeric(format(velo.raw.data$datetime,"%V"))
+
+velo.raw.data  = velo.raw.data  %>% distinct()
+
+velo.raw.data$Comptage.horaire = as.numeric(velo.raw.data$Comptage.horaire)
+
+#date d'installation 
+names(velo.raw.data)[names(velo.raw.data) == "Date.d.installation.du.site.de.comptage"] <- "installation"
+velo.raw.data$installation = as.Date(velo.raw.data$installation, format = "%Y-%m-%d")
+velo.raw.data = velo.raw.data[velo.raw.data$installation <= as.Date("2019-01-01", format = "%Y-%m-%d"),]
+
+
+min <- as.Date("2018-1-1")
+max <- NA
+
+p <- ggplot(velo.raw.data.Combined, aes(x=date, y=mean_q)) +
+  geom_line(color="#69b3a2", size=0.5, alpha=0.9) + 
+  xlab("") + 
+  scale_x_date(limits = c(min, max))
+p
+
+```
