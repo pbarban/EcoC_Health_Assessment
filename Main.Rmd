@@ -47,38 +47,22 @@ bike.data = data %>% mutate(datetime = as.POSIXct(date,format = "%Y-%m-%dT%H:%M:
 ```
 
 ```{r}
-temp <-  tempfile()
-
-dataURL <- paste0("https://opendata.paris.fr/api/datasets/1.0/comptage-velo-historique-donnees-compteurs/attachments/",2018,"_comptage_velo_donnees_compteurs_csv_zip")
-
-dataURL
-
-download.file(dataURL,"~/file.csv", mode="wb")
-unzip("~/file.csv", "~/file.csv")
-
-test = read.csv2(list.files(pattern="*.csv"),sep=";")
-
-unlink(temp)
-
-getwd()
-
-temp <-  tempfile()
+#Historical Data
 
 data_list <- list()
 
 for (i in 2018:2020){
-dataURL <- paste0("https://opendata.paris.fr/api/datasets/1.0/comptage-velo-historique-donnees-compteurs/attachments/",2018,"_comptage_velo_donnees_compteurs_csv_zip")
 
-download.file(dataURL,temp, mode="wb")
-unzip(temp, paste0("comptage",i,".csv"))
-data_list[[length(data_list)+1]] = read.csv2(list.files(pattern="*.csv"),sep=";")
+dataURL <- paste0("https://opendata.paris.fr/api/datasets/1.0/comptage-velo-historique-donnees-compteurs/attachments/",i,"_comptage_velo_donnees_compteurs_csv_zip")
 
-unlink(temp)
+download.file(dataURL,paste0("file",i,".zip"), mode="wb")
+unzip(paste0("file",i,".zip"))
+data_list[[length(data_list)+1]] = read.csv2(list.files(pattern="*.csv"))
+
+file.remove(list.files(pattern="*.csv"))
 }
+Historical.data = do.call(rbind, data_list)
 
-for (i in 2018:2020){
-  print(i)
-}
 
 ```
 
