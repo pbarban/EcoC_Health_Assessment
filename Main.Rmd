@@ -64,9 +64,75 @@ file.remove(list.files(pattern="*.csv"))
 Historical.data = do.call(rbind, data_list)
 
 
+
 ```
 
+
+
+```{r}
+#Date and datetime config
+
+Historical.data = Historical.data %>% mutate(datetime = substr(Date.et.heure.de.comptage, nchar(Date.et.heure.de.comptage)-5,nchar(Date.et.heure.de.comptage)),
+  datetime = as.POSIXct(Date.et.heure.de.comptage,
+                                                        format = "%Y-%m-%dT%H:%M:%S",
+                                                        tz = "UTC"),
+                            dateday =  as.Date(datetime, format = "%Y-%m-%d"),
+  Installation = as.Date(Date.d.installation.du.site.de.comptage, format = "%Y-%m-%d"),
+                         year = paste0("Y",format(datetime,"%Y")),
+                         month = paste0("M",format(datetime,"%m")),
+                         day = paste0("D",format(datetime,"%d")),
+                         weekdays = weekdays(dateday),
+                         TIME = paste0(month,"-",day))
+```
+
+```{r}
+TEST = Historical.data %>% 
+  {if(year == "Y2020") filter(., dateday < as.Date("2020-01-06")) else .} 
+
+
+  filter(Installation <= as.Date("2018-01-01")) %>% 
+  filter(
+    if (year == "Y2020") {
+      dateday < as.Date("2020-01-06")
+    })
+
+else {
+      firstname == this_name & lastname == that_name
+    }
+  )
+         year=="Y2020" ~ dateday < as.Date("2020-01-06"))
+                     
+                     
+                     "Y2021" ~ dateday < as.Date("2021-01-04")))
+         
+         ,
+                   ,
+                   "Y2019" ~ dateday < as.Date("2019-01-07"),
+                   "Y2018" ~ dateday < as.Date("2018-01-01")))
+         
+         
+  pivot_wider( id_cols = TIME, names_from = weekdays, values_from = weekdays)
+
+
+
+
+```
+
+
+
+
+
+
+
 ```{r setup, include=FALSE}
+
+
+
+
+
+
+
+
 setwd("/Volumes/Files/Paris_Paper/")
 velo.raw.data.2018 = read.csv("2018_comptage-velo-donnees-compteurs.csv", sep = ";")
 velo.raw.data.2019 = read.csv("2019_comptage-velo-donnees-compteurs-2.csv", sep = ";")
