@@ -26,7 +26,7 @@ library(lubridate)
 
 ```{r }
 
-Starting.date = Sys.Date() %m+% months(-1)
+Starting.date = Sys.Date() %m+% months(-13)
 Ending.date = Sys.Date()
 n = as.numeric(difftime(as.Date(Ending.date),as.Date(Starting.date), units = c("days")))
 
@@ -41,9 +41,17 @@ data = do.call(rbind, data_list)
 
 data = na.omit(data) 
 
-bike.data = data %>% mutate(datetime = as.POSIXct(date,format = "%Y-%m-%dT%H:%M:%S+00:00"),
+bike.data = data %>%  mutate(datetime = substr(date,
+                                               nchar(date)-5,
+                                               nchar(date)),
+  datetime = as.POSIXct(date,
+                                                        format = "%Y-%m-%dT%H:%M:%S",
+                                                        tz = "UTC"),
                             dateday =  as.Date(datetime, format = "%Y-%m-%d"),
-                            hour = as.numeric(format(datetime,"%H")))
+  Installation = as.Date(installation_date, format = "%Y-%m-%d"))
+  
+
+
 ```
 
 ```{r}
@@ -85,33 +93,55 @@ Historical.data = Historical.data %>% mutate(datetime = substr(Date.et.heure.de.
                          TIME = paste0(month,"-",day))
 ```
 
+
+
+```{r}
+AllData1 = bike.data %>% 
+  select(nom_compteur, sum_counts, Installation, datetime, dateday)
+colnames(Test)
+
+AllData = Historical.data %>% 
+  select(Nom.du.compteur, Comptage.horaire, Installation, datetime, dateday) %>% 
+  rename(sum_counts = Comptage.horaire,
+         nom_compteur = Nom.du.compteur) %>% 
+  rbind(AllData1) %>% 
+  mutate(sum_counts = as.numeric(sum_counts))
+
+AllData %>%  
+  filter(Installation <= as.Date("2018-01-01")) %>% 
+   group_by(dateday)%>% 
+  na.omit() %>% 
+   summarise(sum_counts = mean(sum_counts, na.rm = T)) %>% 
+   ggplot() + geom_line(aes(x = dateday, y = sum_counts))
+
+
+```
+
+
+```{r}
+dataURL = "https://etalab.github.io/jours-feries-france-data/csv/jours_feries_metropole.csv"
+
+download.file(dataURL,paste0("greve.csv"), mode="wb")
+
+holidays = read.csv("greve.csv",encoding = "utf-8", sep = ",")
+
+file.remove(list.files(pattern="*.csv"))
+
+
+```
+
+
+
 ```{r}
 TEST = Historical.data %>% 
   {if(year == "Y2020") filter(., dateday < as.Date("2020-01-06")) else .} 
 
-
-  filter(Installation <= as.Date("2018-01-01")) %>% 
-  filter(
-    if (year == "Y2020") {
-      dateday < as.Date("2020-01-06")
-    })
-
-else {
-      firstname == this_name & lastname == that_name
-    }
-  )
-         year=="Y2020" ~ dateday < as.Date("2020-01-06"))
-                     
-                     
-                     "Y2021" ~ dateday < as.Date("2021-01-04")))
-         
-         ,
-                   ,
-                   "Y2019" ~ dateday < as.Date("2019-01-07"),
-                   "Y2018" ~ dateday < as.Date("2018-01-01")))
+"Y2020" ~ dateday < as.Date("2020-01-06"))
+"Y2021" ~ dateday < as.Date("2021-01-04")))
+"Y2019" ~ dateday < as.Date("2019-01-07"),
+"Y2018" ~ dateday < as.Date("2018-01-01")))
          
          
-  pivot_wider( id_cols = TIME, names_from = weekdays, values_from = weekdays)
 
 
 
