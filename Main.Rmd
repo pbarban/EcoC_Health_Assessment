@@ -20,6 +20,8 @@ library(tidyr)
 library(zoo)
 library(ggplot2)
 library(lubridate)
+library(maps)
+library(ggmap)
 
 ```
 
@@ -98,7 +100,6 @@ Historical.data = Historical.data %>% mutate(datetime = substr(Date.et.heure.de.
 ```{r}
 AllData1 = bike.data %>% 
   select(nom_compteur, sum_counts, Installation, datetime, dateday)
-colnames(Test)
 
 AllData = Historical.data %>% 
   select(Nom.du.compteur, Comptage.horaire, Installation, datetime, dateday) %>% 
@@ -107,13 +108,76 @@ AllData = Historical.data %>%
   rbind(AllData1) %>% 
   mutate(sum_counts = as.numeric(sum_counts))
 
-AllData %>%  
+saveRDS(AllData,'AllBikeData.rds')
+
+AllData = readRDS('AllBikeData.rds')
+
+p1 =AllData %>%  
   filter(Installation <= as.Date("2018-01-01")) %>% 
    group_by(dateday)%>% 
   na.omit() %>% 
    summarise(sum_counts = mean(sum_counts, na.rm = T)) %>% 
-   ggplot() + geom_line(aes(x = dateday, y = sum_counts))
+   ggplot() + geom_line(aes(x = dateday, y = sum_counts)) +
+  geom_rect(aes(xmin=as.Date("2019-12-05"),xmax=as.Date("2020-01-17"),ymin=-Inf,ymax=Inf,fill="Public Transit Strike"),colour=NA) +
+  geom_rect(aes(xmin=as.Date("2020-03-17"),xmax=as.Date("2020-05-11"),ymin=-Inf,ymax=Inf,fill="First Lockdown"),colour=NA) +
+  geom_rect(aes(xmin=as.Date("2020-10-30"),xmax=as.Date("2020-12-15"),ymin=-Inf,ymax=Inf,fill="Second Lockdown"),colour=NA) +
+  geom_rect(aes(xmin=as.Date("2021-01-16"),xmax=as.Date("2021-06-21"),ymin=-Inf,ymax=Inf,fill="Curfew/Confinements"),colour=NA) +
+  geom_line(aes(x =dateday, y=sum_counts),colour='#06067a', size = 0.5)+ 
+  ylab("") +
+  xlab("") + 
+  labs(title = "Average Number of Cyclists \nper Counting Monitor per Day", subtitle = "Paris, Jan. 2018 - July 2021") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20),
+        plot.subtitle = element_text(colour = "#595a5c", size = 16),
+        legend.title = element_blank(),
+        legend.text = element_text( size = 8),
+        legend.position="top",
+        axis.text=element_text(size=12),
+        panel.background = element_rect(fill = "White", colour = "White"),
+        plot.background = element_rect(fill = "White", colour = "White"))
+p1
+ggsave("ParisBikes.png",p1)
 
+
+```
+```{r}
+library(maps)
+library(ggmap)
+data(world.cities)
+force(world.cities)
+PARIS <- world.cities %>% filter(name == "Paris" & country.etc == "France") %>%
+  mutate(lat = as.numeric(lat), long = as.numeric(long))
+
+coef = 0.1
+Paris_borders <- c(bottom = PARIS$lat - coef*0.5,
+                   top = PARIS$lat + coef*0.5,
+                   left = PARIS$long - coef,
+                   right = PARIS$long + coef)
+
+
+map <- get_stamenmap(Paris_borders, zoom = 14, maptype = "toner-lite")
+
+res = GET("https://parisdata.opendatasoft.com/api/records/1.0/search/?dataset=comptage-velo-compteurs&q=&facet=id_compteur&facet=nom_compteur&facet=id&facet=name&facet=installation_date&rows=-1")
+CompteursData= fromJSON(rawToChar(res$content))[["records"]][["fields"]]%>% mutate(coordinates = sub("c\\(", "", coordinates),
+                                   coordinates = sub("\\)", "", coordinates))%>% 
+  na.omit() %>%
+  separate(coordinates, c("Lat", "Lon"), sep = ", ")%>%
+  mutate(Lon = as.numeric(Lon),
+         Lat = as.numeric(Lat))
+
+
+map = ggmap(map) +
+  geom_point(data = CompteursData, aes(x = Lon, y = Lat), size = 2 , color = "#0373fc")+
+  xlab("") +
+  ylab("") +
+  ggtitle("CCyclists Counting Monitors",subtitle =
+            paste0("Paris ", as.character(round(mean(PARIS$lat),digits = 3))," N,", as.character(round(mean(PARIS$long),digits = 3))," E")) +
+  theme(plot.title = element_text(face = "bold", size = 24),plot.subtitle =
+          element_text(colour = "#595a5c"),legend.title = element_text(color =
+                                                                         "#595a5c", size = 20),
+        legend.text = element_text( size = 14))
+
+ggsave("map.png", map)
 
 ```
 
